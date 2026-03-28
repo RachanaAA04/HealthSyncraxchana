@@ -12,6 +12,7 @@ import riskRouter from "./risk";
 import dashboardRouter from "./dashboard";
 import reportRouter from "./report";
 import emergencyRouter from "./emergency";
+import mealPlanRouter from "./meal-plan";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(riskRouter);
 router.use(dashboardRouter);
 router.use(reportRouter);
 router.use(emergencyRouter);
+router.use(mealPlanRouter);
 
 export default router;
