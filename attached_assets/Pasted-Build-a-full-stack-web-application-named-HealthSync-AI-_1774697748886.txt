@@ -1,0 +1,94 @@
+Build a full-stack web application named "HealthSync – AI-Powered Health Companion".
+
+📌 Project Description:
+HealthSync is a smart health management platform designed for women with PCOS/PCOD and thyroid disorders. The app should provide AI-based risk assessment, daily health tracking, chatbot assistance, real-time hospital locator, and emergency support features.
+
+🎯 Core Features:
+
+1. User Authentication:
+- Signup/Login system
+- Secure authentication (JWT or session-based)
+
+2. Dashboard:
+- Personalized dashboard
+- Show daily tasks, reminders, and health summary
+
+3. Daily Health Management:
+- Medication reminders (CRUD)
+- Water intake tracking
+- Exercise scheduler
+- Nutrition planning
+
+4. Health Tracking:
+- Track symptoms (e.g., mood, weight, cycle, fatigue)
+- Store historical data in database
+- Visualize using charts (weekly/monthly trends)
+
+5. AI Risk Assessment:
+- Rule-based or ML-based risk scoring
+- Output: Low / Medium / High risk
+
+6. 🚑 Real-Time Hospital Locator:
+- Use Google Maps JavaScript API + Places API
+- Get user location via Geolocation API
+- Show nearby hospitals on map with markers
+- Display details (name, rating, distance)
+- “Get Directions” button
+- Auto-update when location changes
+
+7. 🤖 AI Chatbot (Health Assistant):
+- Chat interface for user queries
+- Answer FAQs about PCOS/PCOD and thyroid
+- Provide daily suggestions (diet, exercise, habits)
+- Basic symptom-based suggestions (rule-based or API like OpenAI)
+- Maintain chat history for each user
+- UI similar to messaging apps
+
+8. 📊 Doctor Progress Report (VERY IMPORTANT):
+- Generate health reports based on user history
+- Include:
+  - Medication adherence
+  - Symptom trends
+  - Water intake & exercise consistency
+  - Risk level changes over time
+- Display in:
+  - Dashboard view (charts + summary)
+  - Downloadable PDF report
+- Allow doctor view (optional role-based login)
+- Use charts (Chart.js) for visualization
+
+9. Emergency Features:
+- SOS button
+- Send SMS via Twilio API (or simulate)
+- Include user location (Google Maps link)
+
+🛠️ Tech Stack Requirements:
+- Frontend: React.js + Tailwind CSS
+- Backend: Node.js + Express.js
+- Database: MongoDB (preferred)
+- APIs:
+  - Google Maps API (hospital locator)
+  - Twilio API (SOS)
+  - Optional: OpenAI API (chatbot)
+
+📱 Additional Requirements:
+- Responsive UI (mobile-friendly)
+- Clean, modern UI
+- REST API architecture
+- Proper folder structure
+
+📊 Bonus Features:
+- Notifications/reminders UI
+- Dark mode
+- Progressive Web App (PWA)
+
+⚙️ Deliverables:
+- Full working MVP
+- Setup instructions
+- .env file for API keys
+- Sample test data
+
+IMPORTANT:
+- Chatbot should feel interactive and helpful
+- Progress report must be data-driven using user history
+- Focus on real-world usability and clean UI

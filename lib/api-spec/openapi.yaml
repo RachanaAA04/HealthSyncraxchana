@@ -1,22 +1,40 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: HealthSync AI Health Companion API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: medications
+    description: Medication management
+  - name: symptoms
+    description: Symptom tracking
+  - name: water
+    description: Water intake tracking
+  - name: exercise
+    description: Exercise tracking
+  - name: nutrition
+    description: Nutrition planning
+  - name: chat
+    description: AI chatbot
+  - name: risk
+    description: Risk assessment
+  - name: profile
+    description: User profile
+  - name: emergency
+    description: Emergency SOS
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +42,444 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/user:
+    get:
+      operationId: getCurrentAuthUser
+      tags: [auth]
+      summary: Get current auth user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetCurrentAuthUserResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /mobile-auth/token-exchange:
+    post:
+      operationId: exchangeMobileAuthorizationCode
+      tags: [auth]
+      summary: Exchange mobile authorization code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExchangeMobileAuthorizationCodeBody"
+      responses:
+        "200":
+          description: Session token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeMobileAuthorizationCodeResponse"
+
+  /mobile-auth/logout:
+    post:
+      operationId: logoutMobileSession
+      tags: [auth]
+      summary: Logout mobile session
+      responses:
+        "200":
+          description: Logout success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutMobileSessionResponse"
+
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateProfile
+      tags: [profile]
+      summary: Update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  /medications:
+    get:
+      operationId: getMedications
+      tags: [medications]
+      summary: Get all medications for user
+      responses:
+        "200":
+          description: List of medications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Medication"
+    post:
+      operationId: createMedication
+      tags: [medications]
+      summary: Create medication reminder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMedicationBody"
+      responses:
+        "201":
+          description: Created medication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medication"
+
+  /medications/{id}:
+    put:
+      operationId: updateMedication
+      tags: [medications]
+      summary: Update medication
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMedicationBody"
+      responses:
+        "200":
+          description: Updated medication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medication"
+    delete:
+      operationId: deleteMedication
+      tags: [medications]
+      summary: Delete medication
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /medications/{id}/taken:
+    post:
+      operationId: markMedicationTaken
+      tags: [medications]
+      summary: Mark medication as taken today
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Marked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /water:
+    get:
+      operationId: getWaterIntake
+      tags: [water]
+      summary: Get water intake for today
+      responses:
+        "200":
+          description: Water intake
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaterIntake"
+    post:
+      operationId: logWater
+      tags: [water]
+      summary: Log water intake
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogWaterBody"
+      responses:
+        "200":
+          description: Updated water intake
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaterIntake"
+
+  /symptoms:
+    get:
+      operationId: getSymptoms
+      tags: [symptoms]
+      summary: Get symptoms log
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Symptom entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SymptomEntry"
+    post:
+      operationId: logSymptom
+      tags: [symptoms]
+      summary: Log symptoms
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogSymptomBody"
+      responses:
+        "201":
+          description: Created symptom entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SymptomEntry"
+
+  /exercise:
+    get:
+      operationId: getExerciseLogs
+      tags: [exercise]
+      summary: Get exercise logs
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Exercise entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExerciseEntry"
+    post:
+      operationId: logExercise
+      tags: [exercise]
+      summary: Log exercise
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogExerciseBody"
+      responses:
+        "201":
+          description: Created exercise entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExerciseEntry"
+
+  /nutrition:
+    get:
+      operationId: getNutritionLogs
+      tags: [nutrition]
+      summary: Get nutrition logs
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Nutrition entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NutritionEntry"
+    post:
+      operationId: logNutrition
+      tags: [nutrition]
+      summary: Log nutrition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogNutritionBody"
+      responses:
+        "201":
+          description: Created nutrition entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NutritionEntry"
+
+  /chat:
+    get:
+      operationId: getChatHistory
+      tags: [chat]
+      summary: Get chat history
+      responses:
+        "200":
+          description: Chat messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+    post:
+      operationId: sendChatMessage
+      tags: [chat]
+      summary: Send a chat message to AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendChatMessageBody"
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessage"
+
+  /risk-assessment:
+    get:
+      operationId: getRiskAssessment
+      tags: [risk]
+      summary: Get current risk assessment
+      responses:
+        "200":
+          description: Risk assessment result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskAssessment"
+    post:
+      operationId: runRiskAssessment
+      tags: [risk]
+      summary: Run risk assessment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RiskAssessmentInput"
+      responses:
+        "200":
+          description: Risk assessment result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskAssessment"
+
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [profile]
+      summary: Get dashboard summary data
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardData"
+
+  /report:
+    get:
+      operationId: getReport
+      tags: [profile]
+      summary: Get progress report data
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Progress report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressReport"
+
+  /emergency/sos:
+    post:
+      operationId: triggerSOS
+      tags: [emergency]
+      summary: Trigger SOS alert
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SOSBody"
+      responses:
+        "200":
+          description: SOS triggered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +490,564 @@ components:
       required:
         - status
 
+    GetCurrentAuthUserResponse:
+      type: object
+      properties:
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/AuthUser"
+            - type: "null"
+      required:
+        - user
+
+    ExchangeMobileAuthorizationCodeBody:
+      type: object
+      properties:
+        code:
+          type: string
+        code_verifier:
+          type: string
+        redirect_uri:
+          type: string
+        state:
+          type: string
+        nonce:
+          type: ["string", "null"]
+      required:
+        - code
+        - code_verifier
+        - redirect_uri
+        - state
+
+    ExchangeMobileAuthorizationCodeResponse:
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+        - token
+
+    LogoutMobileSessionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        profileImageUrl:
+          type: ["string", "null"]
+        isAuthenticated:
+          type: boolean
+      required:
+        - id
+        - isAuthenticated
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        age:
+          type: ["integer", "null"]
+        weight:
+          type: ["number", "null"]
+        height:
+          type: ["number", "null"]
+        condition:
+          type: ["string", "null"]
+        emergencyContact:
+          type: ["string", "null"]
+        emergencyPhone:
+          type: ["string", "null"]
+        cycleLength:
+          type: ["integer", "null"]
+        lastPeriodDate:
+          type: ["string", "null"]
+        thyroidType:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - userId
+        - createdAt
+        - updatedAt
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        age:
+          type: ["integer", "null"]
+        weight:
+          type: ["number", "null"]
+        height:
+          type: ["number", "null"]
+        condition:
+          type: ["string", "null"]
+        emergencyContact:
+          type: ["string", "null"]
+        emergencyPhone:
+          type: ["string", "null"]
+        cycleLength:
+          type: ["integer", "null"]
+        lastPeriodDate:
+          type: ["string", "null"]
+        thyroidType:
+          type: ["string", "null"]
+
+    Medication:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        name:
+          type: string
+        dosage:
+          type: string
+        frequency:
+          type: string
+        time:
+          type: string
+        notes:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        takenToday:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - name
+        - dosage
+        - frequency
+        - time
+        - isActive
+        - takenToday
+        - createdAt
+
+    CreateMedicationBody:
+      type: object
+      properties:
+        name:
+          type: string
+        dosage:
+          type: string
+        frequency:
+          type: string
+        time:
+          type: string
+        notes:
+          type: ["string", "null"]
+      required:
+        - name
+        - dosage
+        - frequency
+        - time
+
+    WaterIntake:
+      type: object
+      properties:
+        id:
+          type: ["integer", "null"]
+        userId:
+          type: string
+        date:
+          type: string
+        glasses:
+          type: integer
+        goalGlasses:
+          type: integer
+      required:
+        - userId
+        - date
+        - glasses
+        - goalGlasses
+
+    LogWaterBody:
+      type: object
+      properties:
+        glasses:
+          type: integer
+        goalGlasses:
+          type: integer
+      required:
+        - glasses
+
+    SymptomEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        date:
+          type: string
+        mood:
+          type: ["integer", "null"]
+        energyLevel:
+          type: ["integer", "null"]
+        painLevel:
+          type: ["integer", "null"]
+        weight:
+          type: ["number", "null"]
+        cycleDay:
+          type: ["integer", "null"]
+        symptoms:
+          type: array
+          items:
+            type: string
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - date
+        - symptoms
+        - createdAt
+
+    LogSymptomBody:
+      type: object
+      properties:
+        date:
+          type: string
+        mood:
+          type: ["integer", "null"]
+        energyLevel:
+          type: ["integer", "null"]
+        painLevel:
+          type: ["integer", "null"]
+        weight:
+          type: ["number", "null"]
+        cycleDay:
+          type: ["integer", "null"]
+        symptoms:
+          type: array
+          items:
+            type: string
+        notes:
+          type: ["string", "null"]
+      required:
+        - date
+        - symptoms
+
+    ExerciseEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        date:
+          type: string
+        type:
+          type: string
+        duration:
+          type: integer
+        intensity:
+          type: string
+        calories:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - date
+        - type
+        - duration
+        - intensity
+        - createdAt
+
+    LogExerciseBody:
+      type: object
+      properties:
+        date:
+          type: string
+        type:
+          type: string
+        duration:
+          type: integer
+        intensity:
+          type: string
+        calories:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - date
+        - type
+        - duration
+        - intensity
+
+    NutritionEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        date:
+          type: string
+        meal:
+          type: string
+        foods:
+          type: array
+          items:
+            type: string
+        calories:
+          type: ["integer", "null"]
+        protein:
+          type: ["number", "null"]
+        carbs:
+          type: ["number", "null"]
+        fat:
+          type: ["number", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - date
+        - meal
+        - foods
+        - createdAt
+
+    LogNutritionBody:
+      type: object
+      properties:
+        date:
+          type: string
+        meal:
+          type: string
+        foods:
+          type: array
+          items:
+            type: string
+        calories:
+          type: ["integer", "null"]
+        protein:
+          type: ["number", "null"]
+        carbs:
+          type: ["number", "null"]
+        fat:
+          type: ["number", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - date
+        - meal
+        - foods
+
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        role:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - role
+        - content
+        - createdAt
+
+    SendChatMessageBody:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    RiskAssessment:
+      type: object
+      properties:
+        id:
+          type: ["integer", "null"]
+        userId:
+          type: string
+        riskLevel:
+          type: string
+        score:
+          type: integer
+        factors:
+          type: array
+          items:
+            type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        assessedAt:
+          type: string
+      required:
+        - userId
+        - riskLevel
+        - score
+        - factors
+        - recommendations
+        - assessedAt
+
+    RiskAssessmentInput:
+      type: object
+      properties:
+        symptoms:
+          type: array
+          items:
+            type: string
+        irregularCycles:
+          type: boolean
+        weightGain:
+          type: boolean
+        hairLoss:
+          type: boolean
+        acne:
+          type: boolean
+        fatigue:
+          type: boolean
+        hormoneIssues:
+          type: boolean
+        thyroidSymptoms:
+          type: boolean
+        familyHistory:
+          type: boolean
+      required:
+        - symptoms
+
+    DashboardData:
+      type: object
+      properties:
+        todaysMedications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Medication"
+        waterIntake:
+          $ref: "#/components/schemas/WaterIntake"
+        latestSymptoms:
+          $ref: "#/components/schemas/SymptomEntry"
+        riskLevel:
+          type: ["string", "null"]
+        weeklyExerciseCount:
+          type: integer
+        streak:
+          type: integer
+      required:
+        - todaysMedications
+        - waterIntake
+        - weeklyExerciseCount
+        - streak
+
+    ProgressReport:
+      type: object
+      properties:
+        userId:
+          type: string
+        period:
+          type: string
+        medicationAdherence:
+          type: number
+        symptomTrends:
+          type: array
+          items:
+            $ref: "#/components/schemas/SymptomEntry"
+        exerciseSummary:
+          type: object
+          properties:
+            totalSessions:
+              type: integer
+            totalMinutes:
+              type: integer
+            avgIntensity:
+              type: string
+          required:
+            - totalSessions
+            - totalMinutes
+            - avgIntensity
+        waterAdherence:
+          type: number
+        riskHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/RiskAssessment"
+        nutritionSummary:
+          type: object
+          properties:
+            avgCalories:
+              type: ["number", "null"]
+            avgProtein:
+              type: ["number", "null"]
+          required:
+            - avgCalories
+            - avgProtein
+      required:
+        - userId
+        - period
+        - medicationAdherence
+        - symptomTrends
+        - exerciseSummary
+        - waterAdherence
+        - riskHistory
+        - nutritionSummary
+
+    SOSBody:
+      type: object
+      properties:
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        message:
+          type: string
+      required:
+        - message

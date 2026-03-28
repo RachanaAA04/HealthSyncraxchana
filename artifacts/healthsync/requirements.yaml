@@ -1,0 +1,17 @@
+packages:
+  "recharts": "For rendering beautiful health trends and progress report charts"
+  "framer-motion": "For page transitions, smooth micro-interactions, and premium feel"
+  "date-fns": "For formatting dates in logs and dashboard"
+  "lucide-react": "For beautiful consistent iconography"
+  "clsx": "Utility for constructing className strings"
+  "tailwind-merge": "Utility for merging tailwind classes"
+
+images:
+  - path: "artifacts/healthsync/public/images/login-hero.png"
+    description: "Soft, modern abstract 3D flowing shapes in pale purples (lavender), sage greens, and warm blush tones, gentle lighting, representing women's health, wellness, and balance. Clean background."
+    aspect_ratio: "16:9"
+
+notes:
+  - "App uses @workspace/api-client-react for all data fetching (generated React Query hooks)."
+  - "App uses @workspace/replit-auth-web for authentication."
+  - "The UI employs a soft, feminine color palette (violets and sage greens) suitable for a modern women's health companion."
