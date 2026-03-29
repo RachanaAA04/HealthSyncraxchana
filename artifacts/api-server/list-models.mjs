@@ -10,7 +10,7 @@ async function run() {
     console.error("No API key found in .env");
     return;
   }
-  
+
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
     const data = await res.json();

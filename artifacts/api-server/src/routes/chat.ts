@@ -93,9 +93,12 @@ async function getGeminiResponse(userId: string, userMessage: string, history: a
           continue;
       }
       
-      // If it's a critical error like invalid key, stop here
+      // If it's a critical error like invalid key or leaked key, stop here
       if (error.message?.includes("API_KEY_INVALID")) {
           return "Your Gemini API Key is invalid. Please double-check it in Google AI Studio.";
+      }
+      if (error.message?.includes("PERMISSION_DENIED") || error.message?.includes("leaked") || error.message?.includes("403")) {
+          return "Your Gemini API Key has been revoked or reported as leaked. Please generate a new key at https://aistudio.google.com/apikey and update your .env file.";
       }
 
       // If we've reached the last model and it still failed
