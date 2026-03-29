@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "268SGW-lHyJQzMsuMgs3t"
+uri = "file://healthsync-complete-code.txt"
+type = "text"
+title = "HealthSync AI — Complete Source Code"

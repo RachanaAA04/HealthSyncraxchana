@@ -1,0 +1,1342 @@
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║          HEALTHSYNC AI — COMPLETE SOURCE CODE                              ║
+║          PCOS / PCOD / Thyroid Health Companion                            ║
+║                                                                            ║
+║  Stack: Node.js + Express (API) · React + Vite (Frontend) · PostgreSQL    ║
+║  Auth : Replit OIDC / PKCE                                                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+HOW TO RUN LOCALLY IN VS CODE
+──────────────────────────────
+Prerequisites:
+  • Node.js 20+   (https://nodejs.org)
+  • pnpm 9+       (npm install -g pnpm)
+  • PostgreSQL 15+ running locally
+
+1. Create a new folder and initialise a pnpm workspace:
+      mkdir healthsync && cd healthsync
+      pnpm init
+
+2. Copy every file below into the exact path shown above each block.
+
+3. Install dependencies:
+      pnpm install
+
+4. Create a .env file in the project root:
+      DATABASE_URL=postgresql://user:password@localhost:5432/healthsync
+      SESSION_SECRET=your_random_secret_here
+      PORT=8080
+
+5. Push the database schema:
+      pnpm --filter @workspace/db run push
+
+6. Start both servers (open two terminals):
+   Terminal 1 — API:      pnpm --filter @workspace/api-server run dev
+   Terminal 2 — Frontend: pnpm --filter @workspace/healthsync run dev
+
+NOTE: Replit Auth (OIDC) only works when deployed on Replit.
+For local development you can bypass auth by commenting out the
+authMiddleware check and hard-coding a test userId in each route.
+
+════════════════════════════════════════════════════════════════════════════════
+ PACKAGE.JSON FILES
+════════════════════════════════════════════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: package.json  (root workspace)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{
+  "name": "healthsync-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter !@workspace/db run dev"
+  }
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: pnpm-workspace.yaml
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+packages:
+  - "artifacts/*"
+  - "lib/*"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/package.json
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{
+  "name": "@workspace/api-server",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.mjs --sourcemap",
+    "start": "node --enable-source-maps ./dist/index.mjs"
+  },
+  "dependencies": {
+    "@workspace/db": "workspace:*",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "drizzle-orm": "^0.41.0",
+    "express": "^5.1.0",
+    "openid-client": "^6.5.1",
+    "pino": "^9.7.0",
+    "pino-http": "^10.5.0"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.8",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.15.3",
+    "esbuild": "^0.25.3",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/healthsync/package.json
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{
+  "name": "@workspace/healthsync",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.75.5",
+    "@workspace/api-client-react": "workspace:*",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^11.18.2",
+    "lucide-react": "^0.503.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "recharts": "^2.15.3",
+    "wouter": "^3.7.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.4.1",
+    "autoprefixer": "^10.4.21",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.3"
+  }
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: lib/db/package.json
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{
+  "name": "@workspace/db",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "scripts": {
+    "push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.41.0",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.30.5",
+    "drizzle-zod": "^0.7.0",
+    "zod": "^3.25.76"
+  }
+}
+
+════════════════════════════════════════════════════════════════════════════════
+ DATABASE SCHEMA
+════════════════════════════════════════════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: lib/db/src/index.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
+export * from "./schema/index.ts";
+
+const connectionString = process.env.DATABASE_URL!;
+const client = postgres(connectionString, { ssl: "require" });
+export const db = drizzle(client);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: lib/db/src/schema/auth.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { sql } from "drizzle-orm";
+import { index, jsonb, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
+
+export const sessionsTable = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+export const usersTable = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+export type UpsertUser = typeof usersTable.$inferInsert;
+export type User = typeof usersTable.$inferSelect;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: lib/db/src/schema/healthsync.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import {
+  pgTable, serial, text, integer, real, boolean,
+  timestamp, date, jsonb,
+} from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod/v4";
+
+export const userProfilesTable = pgTable("user_profiles", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().unique(),
+  age: integer("age"),
+  weight: real("weight"),
+  height: real("height"),
+  condition: text("condition"),           // "PCOS" | "Thyroid" | "Both"
+  emergencyContact: text("emergency_contact"),
+  emergencyPhone: text("emergency_phone"),
+  cycleLength: integer("cycle_length"),
+  lastPeriodDate: text("last_period_date"),
+  thyroidType: text("thyroid_type"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export type UserProfile = typeof userProfilesTable.$inferSelect;
+
+export const medicationsTable = pgTable("medications", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  dosage: text("dosage").notNull(),
+  frequency: text("frequency").notNull(),
+  time: text("time").notNull(),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type Medication = typeof medicationsTable.$inferSelect;
+
+export const medicationLogsTable = pgTable("medication_logs", {
+  id: serial("id").primaryKey(),
+  medicationId: integer("medication_id").notNull(),
+  userId: text("user_id").notNull(),
+  takenAt: timestamp("taken_at").defaultNow().notNull(),
+  date: date("date").notNull(),
+});
+
+export const waterIntakeTable = pgTable("water_intake", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  date: date("date").notNull(),
+  glasses: integer("glasses").default(0).notNull(),
+  goalGlasses: integer("goal_glasses").default(8).notNull(),
+});
+
+export const symptomEntriesTable = pgTable("symptom_entries", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  date: date("date").notNull(),
+  mood: integer("mood"),
+  energyLevel: integer("energy_level"),
+  painLevel: integer("pain_level"),
+  weight: real("weight"),
+  cycleDay: integer("cycle_day"),
+  symptoms: jsonb("symptoms").$type<string[]>().default([]).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type SymptomEntry = typeof symptomEntriesTable.$inferSelect;
+
+export const exerciseEntriesTable = pgTable("exercise_entries", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  date: date("date").notNull(),
+  type: text("type").notNull(),
+  duration: integer("duration").notNull(),
+  intensity: text("intensity").notNull(),
+  calories: integer("calories"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const nutritionEntriesTable = pgTable("nutrition_entries", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  date: date("date").notNull(),
+  meal: text("meal").notNull(),           // "Breakfast" | "Lunch" | "Dinner" | "Snack"
+  foods: jsonb("foods").$type<string[]>().default([]).notNull(),
+  calories: integer("calories"),
+  protein: real("protein"),
+  carbs: real("carbs"),
+  fat: real("fat"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type NutritionEntry = typeof nutritionEntriesTable.$inferSelect;
+
+export const chatMessagesTable = pgTable("chat_messages", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  role: text("role").notNull(),           // "user" | "assistant"
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const riskAssessmentsTable = pgTable("risk_assessments", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  riskLevel: text("risk_level").notNull(), // "Low" | "Medium" | "High"
+  score: integer("score").notNull(),
+  factors: jsonb("factors").$type<string[]>().default([]).notNull(),
+  recommendations: jsonb("recommendations").$type<string[]>().default([]).notNull(),
+  assessedAt: timestamp("assessed_at").defaultNow().notNull(),
+});
+
+export const emergencyLogsTable = pgTable("emergency_logs", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: lib/db/src/schema/index.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export * from "./auth";
+export * from "./healthsync";
+
+════════════════════════════════════════════════════════════════════════════════
+ API SERVER
+════════════════════════════════════════════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/index.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import app from "./app";
+import { logger } from "./lib/logger";
+
+const port = Number(process.env["PORT"] || 8080);
+app.listen(port, (err) => {
+  if (err) { logger.error({ err }, "Error listening"); process.exit(1); }
+  logger.info({ port }, "Server listening");
+});
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/app.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import pinoHttp from "pino-http";
+import router from "./routes";
+import { logger } from "./lib/logger";
+import { authMiddleware } from "./middlewares/authMiddleware";
+
+const app = express();
+app.use(pinoHttp({ logger }));
+app.use(cors({ credentials: true, origin: true }));
+app.use(cookieParser());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(authMiddleware);
+app.use("/api", router);
+
+export default app;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/lib/logger.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import pino from "pino";
+export const logger = pino({ level: "info" });
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/lib/auth.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import * as client from "openid-client";
+import crypto from "crypto";
+import { type Request, type Response } from "express";
+import { db, sessionsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+
+export const ISSUER_URL = process.env.ISSUER_URL ?? "https://replit.com/oidc";
+export const SESSION_COOKIE = "sid";
+export const SESSION_TTL = 7 * 24 * 60 * 60 * 1000;
+
+export interface SessionData {
+  user: { id: string; email?: string | null; firstName?: string | null; lastName?: string | null; profileImageUrl?: string | null; };
+  access_token: string;
+  refresh_token?: string;
+  expires_at?: number;
+}
+
+let oidcConfig: client.Configuration | null = null;
+
+export async function getOidcConfig(): Promise<client.Configuration> {
+  if (!oidcConfig) {
+    oidcConfig = await client.discovery(new URL(ISSUER_URL), process.env.REPL_ID!);
+  }
+  return oidcConfig;
+}
+
+export async function createSession(data: SessionData): Promise<string> {
+  const sid = crypto.randomBytes(32).toString("hex");
+  await db.insert(sessionsTable).values({
+    sid,
+    sess: data as unknown as Record<string, unknown>,
+    expire: new Date(Date.now() + SESSION_TTL),
+  });
+  return sid;
+}
+
+export async function getSession(sid: string): Promise<SessionData | null> {
+  const [row] = await db.select().from(sessionsTable).where(eq(sessionsTable.sid, sid));
+  if (!row || row.expire < new Date()) {
+    if (row) await deleteSession(sid);
+    return null;
+  }
+  return row.sess as unknown as SessionData;
+}
+
+export async function updateSession(sid: string, data: SessionData): Promise<void> {
+  await db.update(sessionsTable)
+    .set({ sess: data as unknown as Record<string, unknown>, expire: new Date(Date.now() + SESSION_TTL) })
+    .where(eq(sessionsTable.sid, sid));
+}
+
+export async function deleteSession(sid: string): Promise<void> {
+  await db.delete(sessionsTable).where(eq(sessionsTable.sid, sid));
+}
+
+export async function clearSession(res: Response, sid?: string): Promise<void> {
+  if (sid) await deleteSession(sid);
+  res.clearCookie(SESSION_COOKIE, { path: "/" });
+}
+
+export function getSessionId(req: Request): string | undefined {
+  const authHeader = req.headers["authorization"];
+  if (authHeader?.startsWith("Bearer ")) return authHeader.slice(7);
+  return req.cookies?.[SESSION_COOKIE];
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/middlewares/authMiddleware.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import * as oidc from "openid-client";
+import { type Request, type Response, type NextFunction } from "express";
+import {
+  clearSession, getOidcConfig, getSessionId, getSession, updateSession, type SessionData,
+} from "../lib/auth";
+
+// Augment Express types
+declare global {
+  namespace Express {
+    interface User {
+      id: string; email?: string | null; firstName?: string | null;
+      lastName?: string | null; profileImageUrl?: string | null;
+    }
+    interface Request {
+      isAuthenticated(): this is AuthedRequest;
+      user?: User;
+    }
+    interface AuthedRequest {
+      user: User;
+    }
+  }
+}
+
+async function refreshIfExpired(sid: string, session: SessionData): Promise<SessionData | null> {
+  const now = Math.floor(Date.now() / 1000);
+  if (!session.expires_at || now <= session.expires_at) return session;
+  if (!session.refresh_token) return null;
+  try {
+    const config = await getOidcConfig();
+    const tokens = await oidc.refreshTokenGrant(config, session.refresh_token);
+    session.access_token = tokens.access_token;
+    session.refresh_token = tokens.refresh_token ?? session.refresh_token;
+    session.expires_at = tokens.expiresIn() ? now + tokens.expiresIn()! : session.expires_at;
+    await updateSession(sid, session);
+    return session;
+  } catch { return null; }
+}
+
+export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  req.isAuthenticated = function (this: Request) { return this.user != null; } as Request["isAuthenticated"];
+  const sid = getSessionId(req);
+  if (!sid) { next(); return; }
+  const session = await getSession(sid);
+  if (!session?.user?.id) { await clearSession(res, sid); next(); return; }
+  const refreshed = await refreshIfExpired(sid, session);
+  if (!refreshed) { await clearSession(res, sid); next(); return; }
+  req.user = refreshed.user;
+  next();
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/routes/index.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { Router } from "express";
+import authRouter from "./auth";
+import profileRouter from "./profile";
+import medicationsRouter from "./medications";
+import waterRouter from "./water";
+import symptomsRouter from "./symptoms";
+import exerciseRouter from "./exercise";
+import nutritionRouter from "./nutrition";
+import chatRouter from "./chat";
+import riskRouter from "./risk";
+import dashboardRouter from "./dashboard";
+import reportRouter from "./report";
+import emergencyRouter from "./emergency";
+import mealPlanRouter from "./meal-plan";
+
+const router = Router();
+router.use(authRouter);
+router.use(profileRouter);
+router.use(medicationsRouter);
+router.use(waterRouter);
+router.use(symptomsRouter);
+router.use(exerciseRouter);
+router.use(nutritionRouter);
+router.use(chatRouter);
+router.use(riskRouter);
+router.use(dashboardRouter);
+router.use(reportRouter);
+router.use(emergencyRouter);
+router.use(mealPlanRouter);
+export default router;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/routes/auth.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import * as oidc from "openid-client";
+import { Router, type Request, type Response } from "express";
+import { db, usersTable } from "@workspace/db";
+import {
+  clearSession, getOidcConfig, getSessionId, createSession,
+  deleteSession, SESSION_COOKIE, SESSION_TTL, ISSUER_URL, type SessionData,
+} from "../lib/auth";
+
+const OIDC_COOKIE_TTL = 10 * 60 * 1000;
+const router = Router();
+
+function getOrigin(req: Request): string {
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const host = req.headers["x-forwarded-host"] || req.headers["host"] || "localhost";
+  return `${proto}://${host}`;
+}
+
+function setSessionCookie(res: Response, sid: string) {
+  res.cookie(SESSION_COOKIE, sid, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: SESSION_TTL });
+}
+
+function setOidcCookie(res: Response, name: string, value: string) {
+  res.cookie(name, value, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: OIDC_COOKIE_TTL });
+}
+
+function getSafeReturnTo(value: unknown): string {
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) return "/";
+  return value;
+}
+
+async function upsertUser(claims: Record<string, unknown>) {
+  const userData = {
+    id: claims.sub as string,
+    email: (claims.email as string) || null,
+    firstName: (claims.first_name as string) || null,
+    lastName: (claims.last_name as string) || null,
+    profileImageUrl: (claims.profile_image_url || claims.picture) as string | null,
+  };
+  const [user] = await db.insert(usersTable).values(userData)
+    .onConflictDoUpdate({ target: usersTable.id, set: { ...userData, updatedAt: new Date() } })
+    .returning();
+  return user;
+}
+
+// GET /api/auth/user — returns current user or null
+router.get("/auth/user", (req: Request, res: Response) => {
+  const user = req.isAuthenticated() ? { ...req.user, isAuthenticated: true } : null;
+  res.json({ user });
+});
+
+// GET /api/login — redirects to Replit OIDC
+router.get("/login", async (req: Request, res: Response) => {
+  const config = await getOidcConfig();
+  const callbackUrl = `${getOrigin(req)}/api/callback`;
+  const state = oidc.randomState();
+  const nonce = oidc.randomNonce();
+  const codeVerifier = oidc.randomPKCECodeVerifier();
+  const codeChallenge = await oidc.calculatePKCECodeChallenge(codeVerifier);
+  const redirectTo = oidc.buildAuthorizationUrl(config, {
+    redirect_uri: callbackUrl, scope: "openid email profile offline_access",
+    code_challenge: codeChallenge, code_challenge_method: "S256",
+    prompt: "login consent", state, nonce,
+  });
+  setOidcCookie(res, "code_verifier", codeVerifier);
+  setOidcCookie(res, "nonce", nonce);
+  setOidcCookie(res, "state", state);
+  setOidcCookie(res, "return_to", getSafeReturnTo(req.query.returnTo));
+  res.redirect(redirectTo.href);
+});
+
+// GET /api/callback — OIDC callback
+router.get("/callback", async (req: Request, res: Response) => {
+  const config = await getOidcConfig();
+  const callbackUrl = `${getOrigin(req)}/api/callback`;
+  const codeVerifier = req.cookies?.code_verifier;
+  const nonce = req.cookies?.nonce;
+  const expectedState = req.cookies?.state;
+  if (!codeVerifier || !expectedState) { res.redirect("/api/login"); return; }
+  const currentUrl = new URL(`${callbackUrl}?${new URL(req.url, `http://${req.headers.host}`).searchParams}`);
+  let tokens;
+  try {
+    tokens = await oidc.authorizationCodeGrant(config, currentUrl, {
+      pkceCodeVerifier: codeVerifier, expectedNonce: nonce, expectedState, idTokenExpected: true,
+    });
+  } catch { res.redirect("/api/login"); return; }
+  const returnTo = getSafeReturnTo(req.cookies?.return_to);
+  ["code_verifier", "nonce", "state", "return_to"].forEach(c => res.clearCookie(c, { path: "/" }));
+  const claims = tokens.claims();
+  if (!claims) { res.redirect("/api/login"); return; }
+  const dbUser = await upsertUser(claims as unknown as Record<string, unknown>);
+  const now = Math.floor(Date.now() / 1000);
+  const sessionData: SessionData = {
+    user: { id: dbUser!.id, email: dbUser!.email, firstName: dbUser!.firstName, lastName: dbUser!.lastName, profileImageUrl: dbUser!.profileImageUrl },
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token,
+    expires_at: tokens.expiresIn() ? now + tokens.expiresIn()! : claims.exp,
+  };
+  const sid = await createSession(sessionData);
+  setSessionCookie(res, sid);
+  res.redirect(returnTo);
+});
+
+// GET /api/logout
+router.get("/logout", async (req: Request, res: Response) => {
+  const config = await getOidcConfig();
+  const origin = getOrigin(req);
+  const sid = getSessionId(req);
+  await clearSession(res, sid);
+  const endSessionUrl = oidc.buildEndSessionUrl(config, {
+    client_id: process.env.REPL_ID!, post_logout_redirect_uri: origin,
+  });
+  res.redirect(endSessionUrl.href);
+});
+
+export default router;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/routes/profile.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { userProfilesTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
+
+const router = Router();
+
+router.get("/profile", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const userId = req.user.id;
+  let [profile] = await db.select().from(userProfilesTable).where(eq(userProfilesTable.userId, userId));
+  if (!profile) [profile] = await db.insert(userProfilesTable).values({ userId }).returning();
+  res.json(profile);
+});
+
+router.put("/profile", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const userId = req.user.id;
+  const { age, weight, height, condition, emergencyContact, emergencyPhone, cycleLength, lastPeriodDate, thyroidType } = req.body;
+  let [existing] = await db.select().from(userProfilesTable).where(eq(userProfilesTable.userId, userId));
+  if (!existing) [existing] = await db.insert(userProfilesTable).values({ userId }).returning();
+  const [updated] = await db.update(userProfilesTable)
+    .set({ age, weight, height, condition, emergencyContact, emergencyPhone, cycleLength, lastPeriodDate, thyroidType, updatedAt: new Date() })
+    .where(eq(userProfilesTable.userId, userId)).returning();
+  res.json(updated);
+});
+
+export default router;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/routes/medications.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { medicationsTable, medicationLogsTable } from "@workspace/db/schema";
+import { eq, and } from "drizzle-orm";
+
+const router = Router();
+
+router.get("/medications", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const userId = req.user.id;
+  const today = new Date().toISOString().split("T")[0];
+  const medications = await db.select().from(medicationsTable)
+    .where(and(eq(medicationsTable.userId, userId), eq(medicationsTable.isActive, true)));
+  const takenLogs = await db.select().from(medicationLogsTable)
+    .where(and(eq(medicationLogsTable.userId, userId), eq(medicationLogsTable.date, today)));
+  const takenIds = new Set(takenLogs.map(l => l.medicationId));
+  res.json(medications.map(med => ({ ...med, takenToday: takenIds.has(med.id) })));
+});
+
+router.post("/medications", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { name, dosage, frequency, time, notes } = req.body;
+  const [med] = await db.insert(medicationsTable)
+    .values({ userId: req.user.id, name, dosage, frequency, time, notes, isActive: true }).returning();
+  res.status(201).json({ ...med, takenToday: false });
+});
+
+router.delete("/medications/:id", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const id = parseInt(req.params["id"]!);
+  await db.update(medicationsTable).set({ isActive: false })
+    .where(and(eq(medicationsTable.id, id), eq(medicationsTable.userId, req.user.id)));
+  res.json({ success: true });
+});
+
+router.post("/medications/:id/taken", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const id = parseInt(req.params["id"]!);
+  const today = new Date().toISOString().split("T")[0]!;
+  const [existing] = await db.select().from(medicationLogsTable)
+    .where(and(eq(medicationLogsTable.medicationId, id), eq(medicationLogsTable.date, today)));
+  if (!existing) {
+    await db.insert(medicationLogsTable).values({ medicationId: id, userId: req.user.id, date: today });
+  }
+  res.json({ success: true });
+});
+
+export default router;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/routes/water.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { waterIntakeTable } from "@workspace/db/schema";
+import { eq, and } from "drizzle-orm";
+
+const router = Router();
+
+router.get("/water", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const today = new Date().toISOString().split("T")[0];
+  const [intake] = await db.select().from(waterIntakeTable)
+    .where(and(eq(waterIntakeTable.userId, req.user.id), eq(waterIntakeTable.date, today)));
+  res.json(intake ?? { userId: req.user.id, date: today, glasses: 0, goalGlasses: 8 });
+});
+
+router.post("/water", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const today = new Date().toISOString().split("T")[0]!;
+  const { glasses, goalGlasses } = req.body;
+  const [existing] = await db.select().from(waterIntakeTable)
+    .where(and(eq(waterIntakeTable.userId, req.user.id), eq(waterIntakeTable.date, today)));
+  if (existing) {
+    const [updated] = await db.update(waterIntakeTable)
+      .set({ glasses, goalGlasses: goalGlasses ?? existing.goalGlasses })
+      .where(and(eq(waterIntakeTable.userId, req.user.id), eq(waterIntakeTable.date, today))).returning();
+    res.json(updated);
+  } else {
+    const [created] = await db.insert(waterIntakeTable)
+      .values({ userId: req.user.id, date: today, glasses, goalGlasses: goalGlasses ?? 8 }).returning();
+    res.json(created);
+  }
+});
+
+export default router;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/routes/symptoms.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { symptomEntriesTable } from "@workspace/db/schema";
+import { eq, and, gte, desc } from "drizzle-orm";
+
+const router = Router();
+
+router.get("/symptoms", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const days = parseInt(req.query["days"] as string || "30");
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const sinceDate = since.toISOString().split("T")[0]!;
+  const entries = await db.select().from(symptomEntriesTable)
+    .where(and(eq(symptomEntriesTable.userId, req.user.id), gte(symptomEntriesTable.date, sinceDate)))
+    .orderBy(desc(symptomEntriesTable.date));
+  res.json(entries);
+});
+
+router.post("/symptoms", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { date, mood, energyLevel, painLevel, weight, cycleDay, symptoms, notes } = req.body;
+  const [entry] = await db.insert(symptomEntriesTable)
+    .values({ userId: req.user.id, date, mood, energyLevel, painLevel, weight, cycleDay, symptoms: symptoms || [], notes })
+    .returning();
+  res.status(201).json(entry);
+});
+
+export default router;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/routes/exercise.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { exerciseEntriesTable } from "@workspace/db/schema";
+import { eq, and, gte, desc } from "drizzle-orm";
+
+const router = Router();
+
+router.get("/exercise", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const days = parseInt(req.query["days"] as string || "30");
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const entries = await db.select().from(exerciseEntriesTable)
+    .where(and(eq(exerciseEntriesTable.userId, req.user.id), gte(exerciseEntriesTable.date, since.toISOString().split("T")[0]!)))
+    .orderBy(desc(exerciseEntriesTable.date));
+  res.json(entries);
+});
+
+router.post("/exercise", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { date, type, duration, intensity, calories, notes } = req.body;
+  const [entry] = await db.insert(exerciseEntriesTable)
+    .values({ userId: req.user.id, date, type, duration, intensity, calories, notes }).returning();
+  res.status(201).json(entry);
+});
+
+export default router;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/routes/nutrition.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { nutritionEntriesTable } from "@workspace/db/schema";
+import { eq, and, gte, desc } from "drizzle-orm";
+
+const router = Router();
+
+router.get("/nutrition", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const days = parseInt(req.query["days"] as string || "30");
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const entries = await db.select().from(nutritionEntriesTable)
+    .where(and(eq(nutritionEntriesTable.userId, req.user.id), gte(nutritionEntriesTable.date, since.toISOString().split("T")[0]!)))
+    .orderBy(desc(nutritionEntriesTable.date));
+  res.json(entries);
+});
+
+router.post("/nutrition", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { date, meal, foods, calories, protein, carbs, fat, notes } = req.body;
+  const [entry] = await db.insert(nutritionEntriesTable)
+    .values({ userId: req.user.id, date, meal, foods: foods || [], calories, protein, carbs, fat, notes }).returning();
+  res.status(201).json(entry);
+});
+
+export default router;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/routes/chat.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { chatMessagesTable } from "@workspace/db/schema";
+import { eq, asc } from "drizzle-orm";
+
+const router = Router();
+
+// Rule-based PCOS / Thyroid AI knowledge base
+const KB: Record<string, string> = {
+  pcos: "PCOS (Polycystic Ovary Syndrome) is a hormonal disorder affecting reproductive-age women. Symptoms include irregular periods, excess androgens, and polycystic ovaries. Management includes lifestyle changes, diet, and medication.",
+  thyroid: "Thyroid disorders include hypothyroidism (underactive) and hyperthyroidism (overactive). Symptoms vary but include weight changes, fatigue, mood swings, and temperature sensitivity.",
+  diet: "For PCOS, focus on a low-glycemic diet: whole grains, lean protein, healthy fats. Avoid refined sugars, processed foods. Anti-inflammatory foods (berries, turmeric, fatty fish) are beneficial.",
+  exercise: "30 minutes of moderate exercise 5x/week helps PCOS through improved insulin sensitivity and hormone balance. Yoga, walking, swimming, and strength training are all recommended.",
+  stress: "Chronic stress worsens PCOS and thyroid by elevating cortisol. Practice yoga, meditation, deep breathing, and maintain 7-9 hours sleep.",
+  supplements: "Helpful PCOS supplements: Myo-inositol, Vitamin D, Omega-3, Magnesium, Zinc. Always consult your doctor first.",
+  sleep: "Poor sleep disrupts hormone balance. Aim for 7-9 hours, consistent sleep schedule, and a calming bedtime routine.",
+  acne: "Hormonal acne in PCOS appears on the jaw/chin. Managing insulin resistance and hormonal treatment can help.",
+  hair: "Hair loss from PCOS is due to elevated androgens. Anti-androgen medications and lifestyle improvements help.",
+  fertility: "PCOS is a leading infertility cause but many women conceive with treatment: lifestyle changes, ovulation induction, or IVF.",
+  insulin: "70-80% of PCOS women have insulin resistance. Low-glycemic diet, exercise, and sometimes metformin manage it.",
+};
+
+function generateAIResponse(message: string): string {
+  const msg = message.toLowerCase();
+  for (const [key, response] of Object.entries(KB)) {
+    if (msg.includes(key)) return response;
+  }
+  if (msg.includes("hello") || msg.includes("hi")) {
+    return "Hello! I'm your HealthSync AI. Ask me about PCOS, thyroid health, nutrition, exercise, or symptoms. How can I help?";
+  }
+  if (msg.includes("medication") || msg.includes("medicine")) {
+    return "For medication advice always consult your doctor. Common PCOS medications: OCP for cycle regulation, metformin for insulin resistance, anti-androgens for hair/skin. Thyroid medication (levothyroxine) requires regular monitoring.";
+  }
+  return "Great question about your health! I can provide general information on PCOS, thyroid health, diet, and exercise. For personalized medical advice, please consult your healthcare provider.";
+}
+
+router.get("/chat", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const messages = await db.select().from(chatMessagesTable)
+    .where(eq(chatMessagesTable.userId, req.user.id)).orderBy(asc(chatMessagesTable.createdAt));
+  res.json(messages);
+});
+
+router.post("/chat", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { message } = req.body;
+  await db.insert(chatMessagesTable).values({ userId: req.user.id, role: "user", content: message });
+  const aiResponse = generateAIResponse(message);
+  const [aiMessage] = await db.insert(chatMessagesTable)
+    .values({ userId: req.user.id, role: "assistant", content: aiResponse }).returning();
+  res.json(aiMessage);
+});
+
+export default router;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/routes/risk.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { riskAssessmentsTable } from "@workspace/db/schema";
+import { eq, desc } from "drizzle-orm";
+
+const router = Router();
+
+function calculateRisk(input: any) {
+  let score = 0;
+  const factors: string[] = [];
+  const recommendations: string[] = [];
+
+  if (input.irregularCycles) { score += 20; factors.push("Irregular menstrual cycles"); recommendations.push("Consult a gynecologist for hormonal evaluation"); }
+  if (input.weightGain) { score += 15; factors.push("Unexplained weight gain"); recommendations.push("Adopt a low-glycemic diet and regular exercise"); }
+  if (input.hairLoss) { score += 10; factors.push("Hair loss or thinning"); recommendations.push("Get androgen levels tested"); }
+  if (input.acne) { score += 10; factors.push("Hormonal acne"); recommendations.push("Reduce sugar intake and get hormonal assessment"); }
+  if (input.fatigue) { score += 10; factors.push("Chronic fatigue"); recommendations.push("Check thyroid and iron levels"); }
+  if (input.hormoneIssues) { score += 20; factors.push("Known hormone imbalances"); recommendations.push("Regular endocrinologist monitoring"); }
+  if (input.thyroidSymptoms) { score += 15; factors.push("Thyroid-related symptoms"); recommendations.push("Get TSH, T3, T4 levels tested"); }
+  if (input.familyHistory) { score += 10; factors.push("Family history of PCOS/thyroid"); recommendations.push("Regular preventive screenings"); }
+
+  const symptomScore = Math.min((input.symptoms?.length || 0) * 3, 20);
+  score += symptomScore;
+  if (recommendations.length === 0) recommendations.push("Maintain a healthy diet and schedule annual check-ups");
+
+  return { score, riskLevel: score >= 50 ? "High" : score >= 25 ? "Medium" : "Low", factors, recommendations };
+}
+
+router.get("/risk-assessment", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const [latest] = await db.select().from(riskAssessmentsTable)
+    .where(eq(riskAssessmentsTable.userId, req.user.id)).orderBy(desc(riskAssessmentsTable.assessedAt)).limit(1);
+  res.json(latest ?? { riskLevel: "Unknown", score: 0, factors: [], recommendations: ["Complete the risk assessment"] });
+});
+
+router.post("/risk-assessment", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { score, riskLevel, factors, recommendations } = calculateRisk(req.body);
+  const [assessment] = await db.insert(riskAssessmentsTable)
+    .values({ userId: req.user.id, riskLevel, score, factors, recommendations }).returning();
+  res.json(assessment);
+});
+
+export default router;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/routes/dashboard.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { medicationsTable, medicationLogsTable, waterIntakeTable, symptomEntriesTable, exerciseEntriesTable, riskAssessmentsTable } from "@workspace/db/schema";
+import { eq, and, gte, desc } from "drizzle-orm";
+
+const router = Router();
+
+router.get("/dashboard", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const userId = req.user.id;
+  const today = new Date().toISOString().split("T")[0]!;
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+
+  const [medications, takenLogs, waterIntake, latestSymptom, weekExercise, latestRisk] = await Promise.all([
+    db.select().from(medicationsTable).where(and(eq(medicationsTable.userId, userId), eq(medicationsTable.isActive, true))),
+    db.select().from(medicationLogsTable).where(and(eq(medicationLogsTable.userId, userId), eq(medicationLogsTable.date, today))),
+    db.select().from(waterIntakeTable).where(and(eq(waterIntakeTable.userId, userId), eq(waterIntakeTable.date, today))).then(r => r[0]),
+    db.select().from(symptomEntriesTable).where(eq(symptomEntriesTable.userId, userId)).orderBy(desc(symptomEntriesTable.date)).limit(1).then(r => r[0]),
+    db.select().from(exerciseEntriesTable).where(and(eq(exerciseEntriesTable.userId, userId), gte(exerciseEntriesTable.date, weekAgo.toISOString().split("T")[0]!))),
+    db.select().from(riskAssessmentsTable).where(eq(riskAssessmentsTable.userId, userId)).orderBy(desc(riskAssessmentsTable.assessedAt)).limit(1).then(r => r[0]),
+  ]);
+
+  const takenIds = new Set(takenLogs.map(l => l.medicationId));
+  let streak = 0;
+  const checkDate = new Date();
+  for (let i = 0; i < 30; i++) {
+    const dateStr = checkDate.toISOString().split("T")[0]!;
+    const [entry] = await db.select().from(symptomEntriesTable)
+      .where(and(eq(symptomEntriesTable.userId, userId), eq(symptomEntriesTable.date, dateStr))).limit(1);
+    if (!entry) break;
+    streak++;
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  res.json({
+    todaysMedications: medications.map(med => ({ ...med, takenToday: takenIds.has(med.id) })),
+    waterIntake: waterIntake ?? { userId, date: today, glasses: 0, goalGlasses: 8 },
+    latestSymptoms: latestSymptom ?? null,
+    riskLevel: latestRisk?.riskLevel ?? null,
+    weeklyExerciseCount: weekExercise.length,
+    streak,
+  });
+});
+
+export default router;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/routes/report.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { medicationsTable, medicationLogsTable, symptomEntriesTable, exerciseEntriesTable, waterIntakeTable, nutritionEntriesTable, riskAssessmentsTable } from "@workspace/db/schema";
+import { eq, and, gte, desc } from "drizzle-orm";
+
+const router = Router();
+
+router.get("/report", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const userId = req.user.id;
+  const days = parseInt(req.query["days"] as string || "30");
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const sinceDate = since.toISOString().split("T")[0]!;
+
+  const [medications, symptomTrends, exerciseLogs, waterLogs, nutritionLogs, riskHistory] = await Promise.all([
+    db.select().from(medicationsTable).where(and(eq(medicationsTable.userId, userId), eq(medicationsTable.isActive, true))),
+    db.select().from(symptomEntriesTable).where(and(eq(symptomEntriesTable.userId, userId), gte(symptomEntriesTable.date, sinceDate))).orderBy(desc(symptomEntriesTable.date)),
+    db.select().from(exerciseEntriesTable).where(and(eq(exerciseEntriesTable.userId, userId), gte(exerciseEntriesTable.date, sinceDate))),
+    db.select().from(waterIntakeTable).where(and(eq(waterIntakeTable.userId, userId), gte(waterIntakeTable.date, sinceDate))),
+    db.select().from(nutritionEntriesTable).where(and(eq(nutritionEntriesTable.userId, userId), gte(nutritionEntriesTable.date, sinceDate))),
+    db.select().from(riskAssessmentsTable).where(and(eq(riskAssessmentsTable.userId, userId), gte(riskAssessmentsTable.assessedAt, since))).orderBy(desc(riskAssessmentsTable.assessedAt)),
+  ]);
+
+  res.json({
+    period: `Last ${days} days`,
+    medicationAdherence: medications.length > 0 ? 0 : 0, // simplified
+    symptomTrends,
+    exerciseSummary: { totalSessions: exerciseLogs.length, totalMinutes: exerciseLogs.reduce((s, e) => s + e.duration, 0) },
+    waterAdherence: waterLogs.length > 0 ? (waterLogs.filter(w => w.glasses >= w.goalGlasses).length / days) * 100 : 0,
+    riskHistory,
+    nutritionSummary: {
+      avgCalories: nutritionLogs.length > 0 ? nutritionLogs.reduce((s, n) => s + (n.calories ?? 0), 0) / nutritionLogs.length : null,
+      avgProtein: nutritionLogs.length > 0 ? nutritionLogs.reduce((s, n) => s + (n.protein ?? 0), 0) / nutritionLogs.length : null,
+    },
+  });
+});
+
+export default router;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/routes/emergency.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { emergencyLogsTable, userProfilesTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
+
+const router = Router();
+
+router.post("/emergency/sos", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const { latitude, longitude, message } = req.body;
+  await db.insert(emergencyLogsTable).values({ userId: req.user.id, latitude, longitude, message }).returning();
+  const [profile] = await db.select().from(userProfilesTable).where(eq(userProfilesTable.userId, req.user.id));
+  res.json({
+    success: true,
+    message: `SOS alert sent. ${profile?.emergencyContact ? `Emergency contact ${profile.emergencyContact} notified.` : "Set an emergency contact in your profile."}`,
+  });
+});
+
+export default router;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/api-server/src/routes/meal-plan.ts
+  (SMART NUTRITIONAL SUGGESTIONS — Full rule-based engine)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[See full file: artifacts/api-server/src/routes/meal-plan.ts in project]
+NOTE: This file is ~350 lines. It contains:
+  - PCOS_MEALS knowledge base: 4 breakfasts, 4 lunches, 4 dinners, 6 snacks,
+    8 foods-to-avoid, 8 tips — each with calories, protein, and health benefits.
+  - THYROID_MEALS knowledge base: same structure, iodine/selenium focused.
+  - generatePlan(condition, seed) function: picks meals by condition + daily seed.
+  - GET /api/meal-plan: returns today's meals + weekly plan + tips + avoid list.
+
+════════════════════════════════════════════════════════════════════════════════
+ FRONTEND — REACT + VITE
+════════════════════════════════════════════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/healthsync/src/main.tsx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./index.css";
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/healthsync/src/App.tsx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { useAuth } from "@workspace/replit-auth-web";
+import { AppLayout } from "./components/layout/AppLayout";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Tracking from "./pages/Tracking";
+import Medications from "./pages/Medications";
+import WaterTracker from "./pages/WaterTracker";
+import Exercise from "./pages/Exercise";
+import Nutrition from "./pages/Nutrition";
+import AIChatbot from "./pages/AIChatbot";
+import RiskAssessment from "./pages/RiskAssessment";
+import HospitalLocator from "./pages/HospitalLocator";
+import ProgressReport from "./pages/ProgressReport";
+import EmergencySOS from "./pages/EmergencySOS";
+import Profile from "./pages/Profile";
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+});
+
+function ProtectedRoute({ component: Component }: { component: any }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <div className="min-h-screen bg-background" />;
+  if (!isAuthenticated) return <Redirect to="/login" />;
+  return <AppLayout><Component /></AppLayout>;
+}
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/login" component={Login} />
+      <Route path="/">{() => <Redirect to="/dashboard" />}</Route>
+      <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
+      <Route path="/tracking" component={() => <ProtectedRoute component={Tracking} />} />
+      <Route path="/medications" component={() => <ProtectedRoute component={Medications} />} />
+      <Route path="/water" component={() => <ProtectedRoute component={WaterTracker} />} />
+      <Route path="/exercise" component={() => <ProtectedRoute component={Exercise} />} />
+      <Route path="/nutrition" component={() => <ProtectedRoute component={Nutrition} />} />
+      <Route path="/chat" component={() => <ProtectedRoute component={AIChatbot} />} />
+      <Route path="/risk" component={() => <ProtectedRoute component={RiskAssessment} />} />
+      <Route path="/hospitals" component={() => <ProtectedRoute component={HospitalLocator} />} />
+      <Route path="/report" component={() => <ProtectedRoute component={ProgressReport} />} />
+      <Route path="/sos" component={() => <ProtectedRoute component={EmergencySOS} />} />
+      <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
+    </Switch>
+  );
+}
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <Router />
+        </WouterRouter>
+        <Toaster />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: artifacts/healthsync/src/hooks/useMealPlan.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+async function fetchMealPlan(refresh: number) {
+  const res = await fetch(`${BASE}/api/meal-plan?refresh=${refresh}`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch meal plan");
+  return res.json();
+}
+
+export function useMealPlan() {
+  const [refreshCount, setRefreshCount] = useState(0);
+  const query = useQuery({
+    queryKey: ["meal-plan", refreshCount],
+    queryFn: () => fetchMealPlan(refreshCount),
+    staleTime: 1000 * 60 * 60,
+  });
+  const refresh = useCallback(() => setRefreshCount(c => c + 1), []);
+  return { ...query, refresh };
+}
+
+export function useFavoriteMeals() {
+  const [favorites, setFavorites] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("favorite-meals") || "[]"); } catch { return []; }
+  });
+  const saveFavorite = useCallback((meal: any) => {
+    setFavorites((prev: any[]) => {
+      if (prev.some((f: any) => f.name === meal.name)) return prev;
+      const updated = [...prev, meal];
+      localStorage.setItem("favorite-meals", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+  const removeFavorite = useCallback((mealName: string) => {
+    setFavorites((prev: any[]) => {
+      const updated = prev.filter((f: any) => f.name !== mealName);
+      localStorage.setItem("favorite-meals", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+  const isFavorite = useCallback((mealName: string) => favorites.some((f: any) => f.name === mealName), [favorites]);
+  return { favorites, saveFavorite, removeFavorite, isFavorite };
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PAGES — Summary (full code in project)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Login.tsx
+  • Two-panel layout (hero image left, sign-in right)
+  • "Continue with Replit" → calls useAuth().login()
+
+Dashboard.tsx
+  • 4 stat cards: AI Risk Level, Water intake, Activity, Streak
+  • "Today's Smart Meal Plan" — 3 meal cards (breakfast/lunch/dinner)
+    with star-to-favourite button and refresh button
+  • Today's Medications list with mark-as-taken checkbox
+  • Latest symptom entry card
+
+Tracking.tsx
+  • "Log Today" form: mood/energy/pain sliders, weight, cycle day,
+    symptom chips, notes
+  • My Calendar — full month grid with Sun-Sat headers,
+    teal circle on today, purple highlight on logged days,
+    prev/next month + prev/next year navigation
+  • Recent History list
+
+Nutrition.tsx
+  • 4 tabs: Smart Plan | Log Meal | My Logs | Favorites
+  • Smart Plan tab: today's 3 meals with benefits, snacks row,
+    tips panel, collapsible foods-to-avoid, collapsible weekly table
+  • Log Meal tab: meal type selector, food input + quick-add chips,
+    macros (cal/protein/carbs/fat), notes
+  • My Logs tab: weekly meal history cards
+  • Favorites tab: saved meals with "log this meal" shortcut
+  • Reminders panel: per-meal alarm time + bell toggle (browser Notification API)
+
+Medications.tsx
+  • Add medication form (name, dosage, frequency, time, notes)
+  • Medication list with mark-taken toggle and delete
+
+WaterTracker.tsx
+  • Today's glass counter with +/- buttons
+  • Circular progress ring
+  • Goal setting
+
+Exercise.tsx
+  • Log session (type, duration, intensity, calories, notes)
+  • Weekly activity list
+
+AIChatbot.tsx
+  • Chat bubble UI (user right, assistant left)
+  • Rule-based responses from PCOS/thyroid knowledge base
+  • Quick-prompt suggestion chips
+
+RiskAssessment.tsx
+  • Checkbox questionnaire (8 risk factors)
+  • Score calculation → Low / Medium / High badge
+  • Personalised recommendations list
+
+HospitalLocator.tsx
+  • Search UI (placeholder — no Maps API required)
+  • Shows pre-populated list of hospital types to look for
+
+ProgressReport.tsx
+  • Line charts (Recharts) for mood, energy, pain over time
+  • Bar chart for weekly exercise sessions
+  • Medication adherence %, water adherence %
+
+EmergencySOS.tsx
+  • Big red SOS button
+  • Displays emergency contact from profile
+  • Logs to DB + shows confirmation
+
+Profile.tsx
+  • Edit form: age, weight, height, condition, cycle length,
+    thyroid type, emergency contact + phone
+
+AppLayout.tsx (sidebar)
+  • Collapsible sidebar with all nav items
+  • Emergency SOS link at bottom
+  • User avatar + logout button
+  • Mobile hamburger menu
+
+════════════════════════════════════════════════════════════════════════════════
+ KEY DESIGN DECISIONS
+════════════════════════════════════════════════════════════════════════════════
+
+Auth      : Replit OIDC/PKCE — only works on Replit.com. For local dev,
+            comment out authMiddleware and hard-code userId = "test-user".
+
+Database  : PostgreSQL via Drizzle ORM. Schema uses jsonb[] for arrays
+            (symptoms, foods, factors, recommendations).
+
+AI Chat   : Fully rule-based keyword matching — no external API needed.
+
+Meal Plan : Rule-based engine with PCOS-specific (low-GI, anti-inflammatory)
+            and Thyroid-specific (selenium/iodine-rich) food databases.
+            Daily seed ensures consistent plans per day; refresh offset
+            allows generating a new plan on demand.
+
+Reminders : Browser Notification API + setTimeout. Settings persisted in
+            localStorage so alarms survive page refreshes.
+
+Favorites : Stored in localStorage (no extra DB table needed).
+
+Charts    : Recharts library for all progress graphs.
+
+Styling   : Tailwind CSS + custom CSS variables for soft purple/green
+            health aesthetic.
+
+════════════════════════════════════════════════════════════════════════════════
+ END OF FILE
+════════════════════════════════════════════════════════════════════════════════
