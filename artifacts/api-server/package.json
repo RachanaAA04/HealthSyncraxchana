@@ -10,10 +10,13 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
+    "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
+    "dotenv": "^17.3.1",
     "drizzle-orm": "catalog:",
     "express": "^5",
     "openid-client": "^6.8.2",
@@ -21,6 +24,7 @@
     "pino-http": "^10"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
